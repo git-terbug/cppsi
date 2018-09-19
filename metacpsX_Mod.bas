@@ -111,15 +111,22 @@ Private Sub guardar(ar As String)
   Cells.Replace What:=" ", Replacement:="<SP>", LookAt:=xlPart, _
         SearchOrder:=xlByRows, MatchCase:=False, SearchFormat:=False, _
         ReplaceFormat:=False
-        
+
+Dim r As Range
 Dim nom As String
 nom = Environ("HOMEPATH") & "\Documents\iMacros\Datasources\" & ar & ".csv"
 'MsgBox (nom)
-ActiveWorkbook.SaveAs Filename:=nom, FileFormat:=xlCSV
+    'ActiveWorkbook.SaveAs Filename:=nom, FileFormat:=xlCSV ' Descomentar para guardar en lugar de append
 'Descomentar para guardar y cerrar
 ''ActiveWorkbook.Close Savechanges = True
 ''MsgBox ("Documento guardado")
 'Workbooks("cv_a_csv").Activate
+
+'adjuntar en lugar de guardar
+Set r = Range("2:2").SpecialCells(xlCellTypeConstants)
+
+'Append2CSV nom, r
+dumprangetocsv nom, r
 
 'vaciar variables
 Set gcell = Nothing
@@ -536,3 +543,65 @@ lbl_Exit:
     Exit Function
     
 End Function
+
+Private Sub Append2CSV(CSVfile As String, CellRange As Range)
+
+Dim tmpCSV As String
+Dim f As Integer
+f = FreeFile
+
+Open CSVfile For Append As #f
+    tmpCSV = Range2CSV(CellRange)
+Write #f, tmpCSV
+Close #f
+End Sub
+
+Function Range2CSV(list) As String
+
+Dim tmp As String
+Dim cr As Long
+Dim r As Range
+
+If TypeName(list) = "Range" Then
+    cr = 1
+    
+    For Each r In list.Cells
+        If r.Row = cr Then
+            If tmp = vbNullString Then
+            tmp = r.Value
+            Else
+            tmp = tmp & "," & r.Value
+            End If
+        Else
+        cr = cr + 1
+            If tmp = vbNullString Then
+            tmp = r.Value
+            Else
+            tmp = tmp & Chr(10) & r.Value
+            End If
+        End If
+    Next
+End If
+Range2CSV = tmp
+
+End Function
+
+Private Sub dumprangetocsv(CSVfile As String, source_range As Range)
+
+Dim tmpCSV As String
+Dim row_range As Range, mycell As Range
+Dim f As Integer
+f = FreeFile
+
+Open CSVfile For Append As #f
+    For Each row_range In source_range.Rows
+        For Each mycell In row_range.Cells
+            Write #f, mycell.Value,
+        Next mycell
+        Write #f,
+    Next row_range
+
+Close #f
+End Sub
+
+
