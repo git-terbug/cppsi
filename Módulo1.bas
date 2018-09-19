@@ -10,12 +10,10 @@ Public Sub CargarDoc()
         .Filters.Add "Documentos de Word", "*.docx;*.doc"
         .Filters.Add "Todos los archivos", "*.*"
     End With
-    Dim str As String
-   
+    
     If dAbr.Show = -1 Then
       'ActiveDocument.StoryRanges(wdMainTextStory).Delete
       cls = LimpiarDoc()
-    str = Dir(dAbr.SelectedItems(1))
       Selection.InsertFile (dAbr.SelectedItems(1))
       ScratchMacro
       'Application.Documents.Open (dAbr.SelectedItems(1))
@@ -26,10 +24,6 @@ Public Sub CargarDoc()
      'Application.Selection.Copy
        ' ActiveDocument.SaveAs2 "test.txt", 2
       'Application.ActiveWindow.Close
-      
-      'ActiveDocument.Range.InsertBefore str & vbCrLf
-      marcar str
-      formatear
       
     End If
     
@@ -68,155 +62,11 @@ For Each oRng In ActiveDocument.StoryRanges
 Next oRng
 End Sub
 
-Private Sub marcar(nom As String)
-    
-    Dim r As Range
-    Dim titulo
-    Dim str
-    Set r = ActiveDocument.Range
-    
-    r.Select
-    With Selection.Find
-    .ClearFormatting
-    .Text = "*Campo"
-    .Forward = True
-    .Wrap = wdFindContinue
-    .MatchWildcards = True
-    .MatchCase = False
-    .Execute
-    If .Found Then
-    'While .Found
-    Selection.Range.Case = wdUpperCase
-    '.Execute
-    'Wend
-    Selection.Range.Case = wdTitleSentence
-    '.Execute
-    titulo = Selection.Text
-    titulo = Mid(titulo, 1, Len(titulo) - 6)
-    End If
-    End With
-    
-    r.InsertBefore nom & vbCrLf
-    
-    r.Select
-    With Selection.Find
-    .Text = "[0-9]{1,}-*"
-    .Forward = True
-    .Wrap = wdFindContinue
-    .MatchWildcards = True
-    End With
-    Selection.Find.Execute
-    str = Selection.Text
-    str = Mid(str, 1, Len(str) - 1)
-    r.InsertBefore "Id: | " & str & vbCrLf
-    r.InsertBefore "##aut" & vbCrLf
-    
-    'r.Select
-    ''Selection.ClearParagraphAllFormatting
-    ''Selection.ClearFormatting
-    ''Selection.ClearParagraphStyle
-    'Selection.Find.Replacement.ClearFormatting
-    
-    'With Selection.Find
-     '   .ClearFormatting
-      ' .Text = "(^13){2,}"
-       ' '.Replacement.Text = "^s"
-        '.Replacement.Text = "^13"
-        '.Forward = True
-        '.Wrap = wdFindContinue
-        '.Format = False
-        '.Execute Replace:=wdReplaceAll
-    'End With
-    ''Do While Selection.Find.Execute
-    ''Selection.Delete
-    ''Loop
-    
-    Dim elem
-    str = Array("autor/a del resumen:", "correo electrónico:", "dependencia:", _
-        "tutor principal del alumno:", "tutor adjunto del alumno:", "tutor externo del alumno:")
-    For Each elem In str
-    r.Select
-    With Selection.Find
-    .ClearFormatting
-    .Wrap = wdFindContinue
-    .Format = False
-    .Text = elem
-    .MatchCase = False
-    .MatchWildcards = False
-    .Execute
-    If .Found Then
-    Selection.InsertAfter " |"
-    Else
-    MsgBox ("No se encontró " & elem)
-    End If
-    End With
-    Next
-    
-    r.Select
-    With Selection.Find
-    '.Text = "ESQUEMA DE PRESENTACIÓN DEL RESUMEN"
-    .Text = "esquema de presentación del resumen"
-    .MatchCase = False
-    .Execute
-    If .Found Then
-    Selection.InsertAfter vbCrLf & "##res"
-    Selection.InsertAfter vbCrLf & "| " & titulo & " |"
-    End If
-    End With
-    
-    r.Select
-    With Selection.Find
-    .Text = "palabras clave"
-    .Execute
-    End With
-    Selection.InsertBefore "##key" & vbCrLf
-    
-    
-End Sub
-
-Private Sub formatear()
-
-Dim r As Range
-Set r = ActiveDocument.Range
-    
-r.Select
-With Selection.Range.Find
-    .MatchWildcards = True
-    .ClearFormatting
-    .Replacement.ClearFormatting
-    .Forward = True
-    .Wrap = wdFindContinue
-    .Format = False
-    .Text = "[ ^s^t]{1,}^13"
-    .Replacement.Text = "^p"
-    .Execute Replace:=wdReplaceAll
-    '.Text = "([!^13])([^13])([!^13])"
-    '.Replacement.Text = "\1 \3"
-    '.Execute Replace:=wdReplaceAll
-    .Text = "[ ]{2,}"
-    .Replacement.Text = " "
-    .Execute Replace:=wdReplaceAll
-    
-    '.Text = Space(2)
-    '.Replacement.Text = Space(1)
-    '.Execute Replace:=wdReplaceAll
-    
-'    .Text = "([A-Za-z])( {2,})"
- '   .Replacement.Text = "\1 "
-  '  .Execute Replace:=wdReplaceAll
-  
-    .Text = "(^13){2,}"
-    .Replacement.Text = "^13"
-    .Execute Replace:=wdReplaceAll
-    
-End With
-End Sub
-
 Sub DivDoc(delim As String, strNomAr As String)
 
     Dim doc As Document
     Dim arrNotes
-    Dim i As Long
+    Dim I As Long
     'Dim X As Long
     Dim nsec As Collection
     Dim sec As String
@@ -255,34 +105,17 @@ If Response = 7 Then Exit Sub
 Dim ns As Long
 ns = 1
 
-For i = LBound(arrNotes) To UBound(arrNotes)
-If Trim(arrNotes(i)) <> "" Then
+For I = LBound(arrNotes) To UBound(arrNotes)
+If Trim(arrNotes(I)) <> "" Then
 Dim tmp As String
-tmp = Left(arrNotes(i), 1)
+tmp = Left(arrNotes(I), 1)
 'MsgBox (tmp)
    If tmp Like "[a-zA-Z]" Then
        'X = X + 1
     sec = Mid$(nsec.Item(ns), 3)
     'MsgBox ("sección: " & sec)
     Set doc = Documents.Add
-    doc.Range = arrNotes(i)
-    
-    If sec = "res" Then
-    doc.Range.Select
-    'Selection.ClearFormatting
-    With Selection.Find
-        .ClearFormatting
-        '.Text = "(^13){2,}"
-        .Text = "^13"
-        .Replacement.Text = "^s"
-        '.Replacement.Text = "^13"
-        .Forward = True
-        .Wrap = wdFindContinue
-        .Format = False
-        .Execute Replace:=wdReplaceAll
-    End With
-    End If
-    
+    doc.Range = arrNotes(I)
     'doc.SaveAs ThisDocument.Path & "\" & strNomAr & Format(X, "000")
     'doc.SaveAs ThisDocument.Path & "\" & strNomAr & "_" & sec
     doc.SaveAs FileName:=ThisDocument.Path & "\" & strNomAr & "_" & sec & ".txt", FileFormat:=wdFormatText
@@ -295,7 +128,7 @@ tmp = Left(arrNotes(i), 1)
      'MsgBox ("borrar sección " & I)
     End If
 End If
-Next i
+Next I
 MsgBox ("Documentos guardados")
 End Sub
 
