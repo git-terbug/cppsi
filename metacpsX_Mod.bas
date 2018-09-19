@@ -61,7 +61,12 @@ hoja.Activate
 origDIR = Application.ActiveWorkbook.Path
 'MsgBox (origDIR)
 'Sheets("Hoja1").Activate
+
+If NomAr = "" Then
 NomAr = Application.GetOpenFilename("Archivos de texto, *.txt")
+Else
+NomAr = origDIR & NomAr
+End If
 tmp = NomAr
 'MsgBox (tmp)
 If tmp <> False Then
@@ -98,6 +103,7 @@ If tmp <> False Then
     End With
     End If
     'ActiveWorkbook.RefreshAll
+NomAr = ""
 End Sub
 
 Private Sub guardar(ar As String)
@@ -118,7 +124,7 @@ ActiveWorkbook.SaveAs Filename:=nom, FileFormat:=xlCSV
 'vaciar variables
 Set gcell = Nothing
 Set wb = Nothing
-'NomAr = ""
+NomAr = ""
 Set hoja = Nothing
 'origXML = ""
 'origDIR = ""
@@ -141,8 +147,7 @@ Sub Autores()
 
 'Dim gcell As Range
 'Dim wb As Workbook
-
-
+NomAr = "\meta_aut.txt"
 ImportarCV
 
 'Range("A1").EntireRow.Insert
@@ -190,6 +195,7 @@ Range("G1").Value = "rev2ape"
 Range("H1").Value = "rev3"
 Range("I1").Value = "rev3ape"
 Range("J1").Value = "correv"
+Range("K1").Value = "id"
 
 'Set gcell = Workbooks("metacps.xlsm").Sheets("Hoja1").Rows.Find("autor/a", MatchCase:=False)
 'Cells(2, "A").Value = Trim(hoja.Cells(gcell.Row, "B").Value)
@@ -211,11 +217,16 @@ ar = Array("autor/a", "tutor principal", "tutor adjunto", "tutor externo")
 
 'ar(3) = "tutor externo"
 Dim autorForm As DatosForm
-
+Set gcell = hoja.Cells.Find("*.doc")
+Dim docnum
+docnum = gcell.Value
 
 For Each aut In ar
    Set autorForm = New DatosForm
     Set gcell = hoja.Rows.Find(aut, MatchCase:=False)
+    If gcell Is Nothing Then
+    MsgBox (aut & " no encontrado")
+    Else
     Select Case aut
         Case "autor/a"
             col = Array("A", "B")
@@ -237,6 +248,7 @@ For Each aut In ar
     Cells(2, col(0)).Value = Trim(hoja.Cells(gcell.Row, "B").Value)
     Cells(2, col(1)).Value = Trim(hoja.Cells(gcell.Row, "C").Value)
     With autorForm
+    .Caption = docnum
     .lbCapt = capt
     .case_Sel = suf
     .Nom_in.Value = Cells(2, col(0)).Value
@@ -245,13 +257,14 @@ For Each aut In ar
     .col2 = col(1)
     .Show
     End With
-
+    End If
 Next aut
 
 Set gcell = Workbooks("metacps.xlsm").Sheets("Hoja1").Cells.Find("*@*", MatchCase:=False)
 Cells(2, "C").Value = Trim(gcell.Value)
 Cells(2, "J").Value = "correo11@gmail.com"
-            
+Set gcell = hoja.Cells.Find("id:", MatchCase:=False)
+Cells(2, "K").Value = Trim(hoja.Cells(gcell.Row, "B").Value)
 'DatosForm.Show
 
 Columns("A:J").Select
@@ -268,12 +281,12 @@ Selection.EntireColumn.AutoFit
 ''ActiveWorkbook.Close Savechanges = True
 ''MsgBox ("Documento guardado")
 'Workbooks("cv_a_csv").Activate
-nomsec = "autorespi"
+nomsec = "autorespsi"
 guardar nomsec
 
 End Sub
 
-Sub Titulo()
+Sub Titulo2()
 
 'Dim gcell As Range
 'Dim wb As Workbook
@@ -281,8 +294,9 @@ Dim defval, val As String
 Dim tmp, mail As String
 Dim bPral As Boolean
 Dim i, j As Long
-Dim corform As DatoscorForm
-Dim telform As DatostelForm
+'Dim corform As DatoscorForm
+'Dim telform As DatostelForm
+Dim resForm As TyRForm
 
 ImportarCV
 'Set wb = Workbooks.Add(xlWBATWorksheet)
@@ -295,6 +309,7 @@ bPral = False
 Range("A1").Value = "Titulo"
 'Range("A2").Value = "COR"
 Range("B1").Value = "Resumen"
+
 
 Dim arrnotes
 
@@ -416,22 +431,60 @@ guardar nomsec
 
 End Sub
 
-Sub GAcad()
+Sub Titulo()
 
 'Dim gcell As Range
 Dim wb As Workbook
 'Dim hoja As Worksheet
-Set hoja = Workbooks("cv_a_csv").Sheets("Hoja1")
-origXML = "C:\Users\Tita\Documents\areamin.xml"
-'Dim xml_doc As New
+Set hoja = Workbooks("metacps.xlsm").Sheets("Hoja1")
+
+Dim resForm As TyRForm
+
+NomAr = "\meta_res.txt"
 
 ImportarCV
 nuevahoja
 
-Range("A1").Value = "gradoAcademiconivelDeEscolaridad"
-Range("B1").Value = "gradoAcademicotitulo"
-Range("C1").Value = "gradoAcademicoestatus"
+Range("A1").Value = "Titulo"
+Range("A2").Value = Trim(hoja.Cells(1, "B").Value)
+Range("B1").Value = "Resumen"
+Range("B2").Value = Trim(hoja.Cells(1, "C").Value)
+Set resForm = New TyRForm
+resForm.Show
 
+nomsec = "titulocpsi"
+guardar nomsec
+
+End Sub
+
+Sub Index()
+
+Dim wb As Workbook
+'Dim hoja As Worksheet
+Set hoja = Workbooks("metacps.xlsm").Sheets("Hoja1")
+Dim indfrm As indexForm
+
+NomAr = "\meta_key.txt"
+
+ImportarCV
+nuevahoja
+
+Set gcell = hoja.Cells.Find("palabras claves", MatchCase:=False)
+Range("A1").Value = "Palabras clave"
+Range("A2").Value = Trim(hoja.Cells(gcell.Row + 1, "A").Value)
+
+Set gcell = hoja.Cells.Find("fuentes de financiamiento", MatchCase:=False)
+Range("B1").Value = "Patrocinio"
+If gcell Is Nothing Then
+MsgBox ("Falta 'Patrocinio'")
+Else
+Range("B2").Value = Trim(hoja.Cells(gcell.Row + 1, "A").Value)
+End If
+Set indfrm = New indexForm
+indfrm.Show
+
+nomsec = "keycpsi"
+guardar nomsec
 
 End Sub
 
