@@ -1,6 +1,7 @@
 Attribute VB_Name = "metacpsX_Mod"
 Option Explicit
-Public NomAr As String
+Public NomAr As Variant
+'Public NomAr As String
 Public gcell As Range
 Public hoja As Worksheet
 Public wb As Workbook
@@ -52,29 +53,35 @@ Public nomsec As String
   '  ActiveWorkbook.RefreshAll
 'End Sub
 
-Private Sub ImportarCV()
+Private Sub ImportarCV(rImp As String, delim As String)
 
-Dim tmp
-Dim nom
-Set hoja = Workbooks("metacps.xlsm").Sheets("Hoja1")
+Dim tmp As Variant
+Dim i As Integer
+Dim nom As String
+Dim lastcol As Long
+'Set hoja = Workbooks("metacps.xlsm").Sheets("Hoja1")
 hoja.Activate
 origDIR = Application.ActiveWorkbook.Path
 'MsgBox (origDIR)
 'Sheets("Hoja1").Activate
 
 If NomAr = "" Then
-NomAr = Application.GetOpenFilename("Archivos de texto, *.txt")
+NomAr = Application.GetOpenFilename("Archivos de texto (*.txt), *.txt, Archivos de valores separados por comas (*.csv),*.csv", _
+                                    MultiSelect:=True)
 Else
 NomAr = origDIR & NomAr
 End If
 tmp = NomAr
 'MsgBox (tmp)
-If tmp <> False Then
+'If tmp <> False Then
+If IsArray(NomAr) Then
     Sheets("Hoja1").UsedRange.Clear
-    nom = Dir(NomAr)
-    nom = Mid$(nom, 1, Len(nom) - 4)
-    
-    With ActiveSheet.QueryTables.Add(Connection:="TEXT;" & NomAr, Destination:=Range("$A$1"))
+    For i = LBound(NomAr) To UBound(NomAr)
+        nom = Dir(NomAr(i))
+        nom = Mid$(nom, 1, Len(nom) - 4)
+        lastcol = hoja.Cells(1, Columns.Count).End(xlToLeft).Column
+    'With ActiveSheet.QueryTables.Add(Connection:="TEXT;" & NomAr, Destination:=Range("$A$1"))
+    With ActiveSheet.QueryTables.Add(Connection:="TEXT;" & NomAr(i), Destination:=Cells(1, lastcol))
         .Name = nom
         .FieldNames = True
         .RowNumbers = False
@@ -96,11 +103,12 @@ If tmp <> False Then
         .TextFileSemicolonDelimiter = False
         .TextFileCommaDelimiter = False
         .TextFileSpaceDelimiter = False
-        .TextFileOtherDelimiter = "|"
+        .TextFileOtherDelimiter = delim
         .TextFileColumnDataTypes = Array(2)
         .TextFileTrailingMinusNumbers = True
         .Refresh BackgroundQuery:=False
     End With
+    Next
     End If
     'ActiveWorkbook.RefreshAll
 NomAr = ""
@@ -108,14 +116,60 @@ End Sub
 
 Private Sub guardar(ar As String)
 
-  Cells.Replace What:=" ", Replacement:="<SP>", LookAt:=xlPart, _
-        SearchOrder:=xlByRows, MatchCase:=False, SearchFormat:=False, _
+  Cells.Replace what:=" ", Replacement:="<SP>", lookat:=xlPart, _
+        searchorder:=xlByRows, MatchCase:=False, SearchFormat:=False, _
         ReplaceFormat:=False
         
 Dim nom As String
 nom = Environ("HOMEPATH") & "\Documents\iMacros\Datasources\" & ar & ".csv"
+
 'MsgBox (nom)
-ActiveWorkbook.SaveAs Filename:=nom, FileFormat:=xlCSV
+
+Dim sFileSaveName As Variant
+'Dim r As Integer
+'r = 0
+
+'guardarDialog:
+'If r > 0 Then
+'sFileSaveName = Application.GetSaveAsFilename(InitialFileName:=nom)
+'nom = sFileSaveName
+'End If
+
+On Error GoTo 0
+'If nom <> "" And nom <> "False" Then
+    If Len(Dir(nom)) Then
+        Select Case MsgBox(Dir(nom) & " ya existe. ¿Quiere sobreescribirlo?", vbYesNoCancel + vbInformation)
+            Case vbYes
+                Application.DisplayAlerts = False
+                ActiveWorkbook.SaveAs Filename:=nom, FileFormat:=xlCSV
+                Application.DisplayAlerts = True
+            Case vbNo
+                'r = 1
+                'GoTo guardarDialog
+                ActiveWorkbook.Close
+            Case vbCancel
+                 ActiveWorkbook.Close Savechanges:=False
+                 Exit Sub
+        End Select
+    Else
+        ActiveWorkbook.SaveAs Filename:=nom, FileFormat:=xlCSV
+        'Descomentar para guardar y cerrar
+        ''ActiveWorkbook.Close Savechanges = True
+        MsgBox ("Documento guardado")
+    End If
+'Else
+    'ActiveWorkbook.Close Savechanges:=False
+'End If
+errHandler:
+    Exit Sub
+    'If Err <> 0 Then
+        'Exit Sub
+     '   MsgBox Err.Description
+    'End If
+    On Error GoTo 0
+
+'Descomentar para guardar solamente
+'ActiveWorkbook.SaveAs Filename:=nom, FileFormat:=xlCSV
 'Descomentar para guardar y cerrar
 ''ActiveWorkbook.Close Savechanges = True
 ''MsgBox ("Documento guardado")
@@ -144,7 +198,7 @@ Set wb = Workbooks.Add(xlWBATWorksheet)
 End Sub
 
 Sub Autores()
-
+Set hoja = Workbooks("metacps.xlsm").Sheets("Hoja1")
 'Dim gcell As Range
 'Dim wb As Workbook
 NomAr = "\meta_aut.txt"
@@ -293,7 +347,7 @@ Sub Titulo2()
 Dim defval, val As String
 Dim tmp, mail As String
 Dim bPral As Boolean
-Dim i, j As Long
+Dim i, J As Long
 'Dim corform As DatoscorForm
 'Dim telform As DatostelForm
 Dim resForm As TyRForm
@@ -352,7 +406,7 @@ Dim arrnotes
 'Set gcell = hoja.Cells.Find("@")
 With hoja.UsedRange
     Set gcell = .Cells.Find("@")
-    j = 2
+    J = 2
     If Not gcell Is Nothing Then
         Dim inicio
         inicio = gcell.Address
@@ -364,18 +418,18 @@ With hoja.UsedRange
             If Trim(arrnotes(i)) <> "" Then
                 tmp = arrnotes(i)
                 If tmp Like "*@*.*" Then
-                    Cells(j, "A").Value = "COR"
-                    Cells(j, "C").Value = tmp
+                    Cells(J, "A").Value = "COR"
+                    Cells(J, "C").Value = tmp
                     Set corform = New DatoscorForm
                     With corform
-                    .cont = j
+                    .cont = J
                     .correo_in.Value = Trim(tmp)
                     .Show
         'DatoscorForm.cont = j
         'DatoscorForm.Show
                     End With
                     Set corform = Nothing
-                    j = j + 1
+                    J = J + 1
                 End If
             End If
         Next i
@@ -400,7 +454,7 @@ Range("H1").Value = "medioContactoDTOesPrincipal"
 
 Dim c
 With hoja.UsedRange
-    j = 2
+    J = 2
     Set gcell = .Range("A1:G10").SpecialCells(xlCellTypeConstants)
     For Each c In gcell
     
@@ -409,15 +463,15 @@ With hoja.UsedRange
     If c.Value Like "*####*" Then
         'MsgBox (C.Value)
         tmp = c.Value
-        Cells(j, "G").Value = tmp
+        Cells(J, "G").Value = tmp
         Set telform = New DatostelForm
         With telform
-            .cont = j
+            .cont = J
             .tel_in.Value = Trim(tmp)
             .Show
         End With
         Set telform = Nothing
-        j = j + 1
+        J = J + 1
     End If
     Next
 End With
@@ -425,7 +479,6 @@ End With
 nomsec = "DatosII"
 guardar nomsec
 'nom = Environ("HOMEPATH") & "\Documents\iMacros\Datasources\DatosII.csv"
-'C:\Users\Tita\Documents\iMacros\Datasources
 'MsgBox (nom)
 'ActiveWorkbook.SaveAs Filename:=nom, FileFormat:=xlCSV
 
@@ -536,3 +589,161 @@ lbl_Exit:
     Exit Function
     
 End Function
+
+'copia todos los metadatos en un solo archivo
+Sub Meta()
+Set hoja = Workbooks("metacps.xlsm").Sheets("Hoja1")
+Dim lastcol As Long
+Dim lastcell As Range
+Dim Lrange As String
+
+hoja.UsedRange.Clear
+Set lastcell = hoja.Cells.Find(what:="*", after:=hoja.Cells(1, 1), LookIn:=xlFormulas, lookat:=xlPart, _
+                searchorder:=xlByColumns, searchdirection:=xlPrevious, MatchCase:=False)
+'MsgBox ("The last used column is: " & lastcell.Column)
+'r = Range.Row 1
+'ActiveWorkbook.ActiveSheet.Cells(5, Columns.Count).End(xlToLeft).Column
+lastcol = hoja.Range("A1").CurrentRegion.Columns.Count
+
+Dim J As Integer
+J = ActiveSheet.UsedRange.SpecialCells(xlCellTypeLastCell).Column
+
+Lrange = "A1"
+ImportarCV Lrange, ","
+
+'Range("A1").EntireRow.Insert
+'Cells(1, "A").Value = "datosGeneralesrfc"
+'Cells(1, "B").Value = "datosGeneralesestadoCivilVO"
+'Set gcell = ActiveSheet.Cells.Find("RFC", MatchCase:=True)
+'Cells(2, "A").Value = Trim(gcell.Value)
+'Set gcell = ActiveSheet.Cells.Find("estado civil", MatchCase:=False)
+'Cells(2, "B").Value = Trim(gcell.Value)
+
+'Método 2 (funcional)
+'Sheets("Hoja2").Activate
+'Sheets("Hoja2").UsedRange.Clear
+'Range("A1").Value = "datosGeneralesrfc"
+'Range("B1").Value = "datosGeneralesestadoCivilVO"
+'Set gcell = Sheets("Hoja1").Cells.Find("RFC", MatchCase:=True)
+'Cells(2, "A").Value = Trim(gcell.Value)
+'Set gcell = Sheets("Hoja1").Cells.Find("estado civil", MatchCase:=False)
+'Cells(2, "B").Value = Trim(gcell.Value)
+'Columns("A:B").Select
+'Selection.EntireColumn.AutoFit
+'ThisWorkbook.Sheets("Hoja2").Copy
+''Dim nom As String
+'nom = Environ("HOMEPATH") & "\Documents\iMacros\Datasources\DatosI.csv"
+''C:\Users\Tita\Documents\iMacros\Datasources
+''MsgBox (nom)
+'ActiveWorkbook.SaveAs Filename:=nom, FileFormat:=xlCSV
+''ActiveWorkbook.Close Savechanges = True
+''MsgBox ("Documento guardado")
+
+'Método 3
+'Crea nuevo libro con una hoja
+'Set wb = Workbooks.Add(xlWBATWorksheet)
+
+nuevahoja
+'Sheets("Hoja2").Activate
+'Sheets("Hoja2").UsedRange.Clear
+Range("A1").Value = "nombre"
+Range("B1").Value = "apellido"
+Range("C1").Value = "correo"
+Range("D1").Value = "rev1"
+Range("E1").Value = "rev1ape"
+Range("F1").Value = "rev2"
+Range("G1").Value = "rev2ape"
+Range("H1").Value = "rev3"
+Range("I1").Value = "rev3ape"
+Range("J1").Value = "correv"
+Range("K1").Value = "id"
+
+'Set gcell = Workbooks("metacps.xlsm").Sheets("Hoja1").Rows.Find("autor/a", MatchCase:=False)
+'Cells(2, "A").Value = Trim(hoja.Cells(gcell.Row, "B").Value)
+'Cells(2, "B").Value = Trim(hoja.Cells(gcell.Row, "C").Value)
+'Set gcell = hoja.Rows.Find("tutor principal", MatchCase:=False)
+'Cells(2, "D").Value = Trim(hoja.Cells(gcell.Row, "B").Value)
+'Cells(2, "E").Value = Trim(hoja.Cells(gcell.Row, "C").Value)
+Dim ar
+Dim aut
+Dim col
+Dim capt
+Dim suf
+ar = Array("autor/a", "tutor principal", "tutor adjunto", "tutor externo")
+'ar(0, 0) = "autor/a"
+'ar(1, 0) = "tutor principal"
+'ar(1, 1) = "tutor principal"
+'ar(2, 0) = "tutor adjunto"
+'ar(2, 1) = "tutor adjunto"
+
+'ar(3) = "tutor externo"
+Dim autorForm As DatosForm
+Set gcell = hoja.Cells.Find("*.doc")
+Dim docnum
+docnum = gcell.Value
+
+For Each aut In ar
+   Set autorForm = New DatosForm
+    Set gcell = hoja.Rows.Find(aut, MatchCase:=False)
+    If gcell Is Nothing Then
+    MsgBox (aut & " no encontrado")
+    Else
+    Select Case aut
+        Case "autor/a"
+            col = Array("A", "B")
+            capt = "Datos del autor/a"
+            suf = " - Autor"
+        Case "tutor principal"
+            col = Array("D", "E")
+            capt = "Datos del tutor principal"
+            suf = " - Tutor Principal"
+        Case "tutor adjunto"
+            col = Array("F", "G")
+            capt = "Datos del tutor adjunto"
+            suf = " - Tutor Adjunto"
+        Case "tutor externo"
+            col = Array("H", "I")
+            capt = "Datos del tutor externo"
+            suf = " - Tutor Externo"
+    End Select
+    Cells(2, col(0)).Value = Trim(hoja.Cells(gcell.Row, "B").Value)
+    Cells(2, col(1)).Value = Trim(hoja.Cells(gcell.Row, "C").Value)
+    With autorForm
+    .Caption = docnum
+    .lbCapt = capt
+    .case_Sel = suf
+    .Nom_in.Value = Cells(2, col(0)).Value
+    .col1 = col(0)
+    .Ape_in.Value = Cells(2, col(1)).Value
+    .col2 = col(1)
+    .Show
+    End With
+    End If
+Next aut
+
+Set gcell = Workbooks("metacps.xlsm").Sheets("Hoja1").Cells.Find("*@*", MatchCase:=False)
+Cells(2, "C").Value = Trim(gcell.Value)
+Cells(2, "J").Value = "correo11@gmail.com"
+Set gcell = hoja.Cells.Find("id:", MatchCase:=False)
+Cells(2, "K").Value = Trim(hoja.Cells(gcell.Row, "B").Value)
+'DatosForm.Show
+
+Columns("A:J").Select
+Selection.EntireColumn.AutoFit
+'ThisWorkbook.Sheets("Hoja2").Copy
+
+'Reemplazar por sub guardar
+''Dim nom As String
+'nom = Environ("HOMEPATH") & "\Documents\iMacros\Datasources\DatosI.csv"
+''C:\Users\Tita\Documents\iMacros\Datasources
+''MsgBox (nom)
+'ActiveWorkbook.SaveAs Filename:=nom, FileFormat:=xlCSV
+'Descomentar para guardar y cerrar
+''ActiveWorkbook.Close Savechanges = True
+''MsgBox ("Documento guardado")
+'Workbooks("cv_a_csv").Activate
+nomsec = "autorespsi"
+guardar nomsec
+
+End Sub
+
