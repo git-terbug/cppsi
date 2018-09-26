@@ -5,19 +5,30 @@ Public Sub CargarDoc()
     Dim dAbr As FileDialog, result As Integer, it As Variant
     Set dAbr = Application.FileDialog(FileDialogType:=msoFileDialogOpen)
     With dAbr
-        .AllowMultiSelect = False
+        '.AllowMultiSelect = False
+        .AllowMultiSelect = True
         .Filters.Clear
         .Filters.Add "Documentos de Word", "*.docx;*.doc"
         .Filters.Add "Todos los archivos", "*.*"
     End With
     Dim str As String
+   Dim i As Integer
    
     If dAbr.Show = -1 Then
       'ActiveDocument.StoryRanges(wdMainTextStory).Delete
-      cls = LimpiarDoc()
-    str = Dir(dAbr.SelectedItems(1))
-      Selection.InsertFile (dAbr.SelectedItems(1))
-      ScratchMacro
+      'cls = LimpiarDoc()
+      'str = Dir(dAbr.SelectedItems(1))
+      'Selection.InsertFile (dAbr.SelectedItems(1))
+      'ScratchMacro
+      For Each f In dAbr.SelectedItems
+        cls = LimpiarDoc()
+        str = Dir(f)
+       Selection.InsertFile (f)
+      'For i = LBound(dAbr.SelectedItems) To UBound(dAbr.SelectedItems)
+       ' str = Dir(dAbr.SelectedItems(i))
+        'Selection.InsertFile (dAbr.SelectedItems(i))
+        ScratchMacro
+        
       'Application.Documents.Open (dAbr.SelectedItems(1))
       'Dim tmp
       'Selection.WholeStory
@@ -28,11 +39,25 @@ Public Sub CargarDoc()
       'Application.ActiveWindow.Close
       
       'ActiveDocument.Range.InsertBefore str & vbCrLf
-      marcar str
-      formatear
-      
+        marcar str
+        formatear
+        'Select Case MsgBox("¿Separar documento?", vbYesNo + vbInformation)
+         '   Case vbYes
+          '      SepararDoc
+           ' Case Else
+            '    exit sub
+        'End Select
+        If MsgBox("¿Separar documento?", vbYesNo + vbInformation) = vbYes Then
+            SepararDoc
+        End If
+        'el último archivo no puede repetirse
+        If Not f = dAbr.SelectedItems.Item(dAbr.SelectedItems.Count) Then
+        If Not MsgBox("¿Continuar?", vbYesNo + vbInformation) = vbYes Then
+            Exit For
+        End If
+        End If
+        Next f
     End If
-    
 End Sub
 
 Private Sub ScratchMacro()
@@ -93,6 +118,8 @@ Private Sub marcar(nom As String)
         '.Execute
             titulo = Selection.Text
             titulo = Mid(titulo, 1, Len(titulo) - 6)
+            Selection.InsertBefore "Título: | "
+
         End If
     End With
     
@@ -135,14 +162,58 @@ Private Sub marcar(nom As String)
     Dim idx As Integer
     Dim ss As Range
     Dim nomArr() As String
+    Dim nivel As String
+    
+    r.Select
+    With Selection.Find
+    .Text = "nivel de estudios"
+    .ClearFormatting
+    .Wrap = wdFindContinue
+    .Forward = True
+    .Format = False
+    .MatchWildcards = False
+    .MatchCase = False
+    .Execute
+        If .Found Then
+            Selection.MoveRight unit:=wdWord, Count:=2
+            Selection.InsertAfter "|"
+            Selection.MoveRight unit:=wdWord
+            Selection.EndKey unit:=wdLine, Extend:=wdExtend
+            Set ss = Selection.Range
+            '.SpellingErrors
+            If ss.SpellingErrors.Count > 0 Then
+                With ss.SpellingErrors.Item(1).GetSpellingSuggestions
+                    If .Count > 0 Then
+                    Selection.Text = .Item(1).Name
+                    End If
+                End With
+            End If
+            'Set objRegEx = CreateObject("VBScript.RegExp")
+            'objRegEx.Global = True
+            'objRegEx.Pattern = "[ ]"
+            nivel = LCase(Selection.Text)
+            'nivel = Replace(nivel, Chr(160), "")
+            'nivel = objRegEx.Replace(nivel, "")
+            'nivel = Application.CleanString(nivel)
+            'remover carácteres no imprimibles
+            nivel = Excel.WorksheetFunction.Clean(nivel)
+            nivel = Trim(nivel)
+        End If
+    End With
     
     idx = 1
     'step = 1
     Dim elem
     'Dim autorForm As Nomform
     'definir campos
-    str = Array("autor/a del resumen:", "correo electrónico:", "dependencia:", _
-        "tutor principal del alumno:", "tutor adjunto del alumno:", "tutor externo del alumno:")
+    Select Case nivel
+        Case "doctorado"
+            str = Array("autor/a del resumen:", "correo electrónico:", "dependencia:", _
+                "tutor principal del alumno:", "tutor adjunto del alumno:", "tutor externo del alumno:")
+        Case "maestría"
+            str = Array("autor/a del resumen:", "correo electrónico:", "dependencia:", "tutor del alumno:")
+        End Select
+    
     For Each elem In str
     r.Select
     With Selection.Find
@@ -255,6 +326,7 @@ Private Sub marcar(nom As String)
     idx = idx + 1
     Next
     
+    
     'restablecer propiedades de .find
     r.Select
     str = "esquema de presentación del resumen"
@@ -274,8 +346,21 @@ Private Sub marcar(nom As String)
     '.MatchAllWordForms = False
     .Execute
     If Selection.Find.Found Then
-    Selection.InsertAfter vbCrLf & "##res"
+    Selection.InsertAfter vbCrLf & "##res" '& _
+                    'vbCrLf & "| " & titulo & " |" & vbCr
     Selection.InsertAfter vbCrLf & "| " & titulo & " |"
+    Else
+    str = "antecedentes y justificación"
+        With Selection.Find
+        .Text = str
+        .MatchCase = False
+        .Execute
+        If .Found Then
+            'Selection.MoveUp
+            Selection.InsertBefore vbCrLf & "##res" & vbCrLf & _
+                                "| " & titulo & " |" & vbCrLf
+        End If
+        End With
     End If
     End With
     
