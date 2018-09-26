@@ -7,7 +7,7 @@ Public wb As Workbook
 Public origXML As String
 Public origDIR As String
 Public nomsec As String
-
+Public niv As String
 'Sub Macro1()
 '
 ' Macro1 Macro
@@ -15,7 +15,7 @@ Public nomsec As String
 
 '
  '   With ActiveSheet.QueryTables.Add(Connection:= _
-  '      "TEXT;C:\Users\Tita\Documents\CV_form.txt", Destination:=Range("$A$1"))
+  '      "TEXT;C:\Users\Documents\CV_form.txt", Destination:=Range("$A$1"))
    '     .Name = "CV_form"
     '    .FieldNames = True
      '   .RowNumbers = False
@@ -112,12 +112,59 @@ Private Sub guardar(ar As String)
         SearchOrder:=xlByRows, MatchCase:=False, SearchFormat:=False, _
         ReplaceFormat:=False
         
+Dim r As Range
 Dim nom As String
 nom = Environ("HOMEPATH") & "\Documents\iMacros\Datasources\" & ar & ".csv"
+
 'MsgBox (nom)
-ActiveWorkbook.SaveAs Filename:=nom, FileFormat:=xlCSV
+
+'Dim sFileSaveName As Variant
+'Dim r As Integer
+'r = 0
+
+'guardarDialog:
+'If r > 0 Then
+'sFileSaveName = Application.GetSaveAsFilename(InitialFileName:=nom)
+'nom = sFileSaveName
+'End If
+
+On Error GoTo 0
+'If nom <> "" And nom <> "False" Then
+    If Len(Dir(nom)) Then
+    'comentar temporalmente descomentar en versión final
+        Select Case MsgBox(Dir(nom) & " ya existe. ¿Quiere sobreescribirlo?", vbYesNoCancel + vbInformation)
+            Case vbYes
+                'Application.DisplayAlerts = False
+                'ActiveWorkbook.SaveAs Filename:=nom, FileFormat:=xlCSV 'descomentar para guardar sin adjuntar
+                'adjuntar en lugar de guardar
+                Set r = Range("2:2").SpecialCells(xlCellTypeConstants)
+                'Append2CSV nom, r
+                dumprangetocsv nom, r
+                Application.DisplayAlerts = True
+            Case vbNo
+                'r = 1
+                'GoTo guardarDialog
+                ActiveWorkbook.Close
+            Case vbCancel
+                 ActiveWorkbook.Close savechanges:=False
+                 Exit Sub
+        End Select
+    Else
+        ActiveWorkbook.SaveAs Filename:=nom, FileFormat:=xlCSV
+        'Descomentar para guardar y cerrar
+        ''ActiveWorkbook.Close Savechanges = True
+        MsgBox ("Documento guardado")
+    End If
+'Else
+    'ActiveWorkbook.Close Savechanges:=False
+'End If
+
+'Descomentar para guardar solamente
+'ActiveWorkbook.SaveAs Filename:=nom, FileFormat:=xlCSV
 'Descomentar para guardar y cerrar
 ''ActiveWorkbook.Close Savechanges = True
+'ActiveWorkbook.Close
+ActiveWorkbook.Close (False)
 ''MsgBox ("Documento guardado")
 'Workbooks("cv_a_csv").Activate
 
@@ -129,6 +176,13 @@ Set hoja = Nothing
 'origXML = ""
 'origDIR = ""
 'nomsec = ""
+errHandler:
+    Exit Sub
+    'If Err <> 0 Then
+        'Exit Sub
+     '   MsgBox Err.Description
+    'End If
+    On Error GoTo 0
 
 End Sub
 
@@ -172,7 +226,6 @@ ImportarCV
 'ThisWorkbook.Sheets("Hoja2").Copy
 ''Dim nom As String
 'nom = Environ("HOMEPATH") & "\Documents\iMacros\Datasources\DatosI.csv"
-''C:\Users\Tita\Documents\iMacros\Datasources
 ''MsgBox (nom)
 'ActiveWorkbook.SaveAs Filename:=nom, FileFormat:=xlCSV
 ''ActiveWorkbook.Close Savechanges = True
@@ -182,7 +235,22 @@ ImportarCV
 'Crea nuevo libro con una hoja
 'Set wb = Workbooks.Add(xlWBATWorksheet)
 
+niv = "nivel de estudios"
+Set gcell = hoja.Rows.Find(niv, MatchCase:=False)
+    If gcell Is Nothing Then
+    MsgBox (niv & " no encontrado")
+    niv = DoM
+    Else
+    niv = Trim(LCase(Cells(gcell.Row, gcell.Column + 1).Value))
+   End If
+
 nuevahoja
+'buscar nombre del documento para msgbox.caption
+Dim autorForm As DatosForm
+Set gcell = hoja.Cells.Find("*.doc")
+Dim docnum
+docnum = gcell.Value
+
 'Sheets("Hoja2").Activate
 'Sheets("Hoja2").UsedRange.Clear
 Range("A1").Value = "nombre"
@@ -190,12 +258,20 @@ Range("B1").Value = "apellido"
 Range("C1").Value = "correo"
 Range("D1").Value = "rev1"
 Range("E1").Value = "rev1ape"
+
+Dim ar
+Dim aut
+Dim col
+Dim capt
+Dim suf
+Dim lastcol
+
+Select Case niv
+Case "doctorado"
 Range("F1").Value = "rev2"
 Range("G1").Value = "rev2ape"
 Range("H1").Value = "rev3"
 Range("I1").Value = "rev3ape"
-Range("J1").Value = "correv"
-Range("K1").Value = "id"
 
 'Set gcell = Workbooks("metacps.xlsm").Sheets("Hoja1").Rows.Find("autor/a", MatchCase:=False)
 'Cells(2, "A").Value = Trim(hoja.Cells(gcell.Row, "B").Value)
@@ -203,11 +279,7 @@ Range("K1").Value = "id"
 'Set gcell = hoja.Rows.Find("tutor principal", MatchCase:=False)
 'Cells(2, "D").Value = Trim(hoja.Cells(gcell.Row, "B").Value)
 'Cells(2, "E").Value = Trim(hoja.Cells(gcell.Row, "C").Value)
-Dim ar
-Dim aut
-Dim col
-Dim capt
-Dim suf
+
 ar = Array("autor/a", "tutor principal", "tutor adjunto", "tutor externo")
 'ar(0, 0) = "autor/a"
 'ar(1, 0) = "tutor principal"
@@ -216,10 +288,13 @@ ar = Array("autor/a", "tutor principal", "tutor adjunto", "tutor externo")
 'ar(2, 1) = "tutor adjunto"
 
 'ar(3) = "tutor externo"
-Dim autorForm As DatosForm
-Set gcell = hoja.Cells.Find("*.doc")
-Dim docnum
-docnum = gcell.Value
+nomsec = "autorespsi"
+
+Case "maestría"
+ar = Array("autor/a", "tutor")
+nomsec = "autM_cpsi"
+
+End Select
 
 For Each aut In ar
    Set autorForm = New DatosForm
@@ -232,6 +307,12 @@ For Each aut In ar
             col = Array("A", "B")
             capt = "Datos del autor/a"
             suf = " - Autor"
+        'tutor maestría
+        Case "tutor"
+            col = Array("D", "E")
+            capt = "Datos del tutor principal"
+            suf = " - Tutor Principal"
+        'tutores doctorado
         Case "tutor principal"
             col = Array("D", "E")
             capt = "Datos del tutor principal"
@@ -260,28 +341,30 @@ For Each aut In ar
     End If
 Next aut
 
+lastcol = Cells(1, Columns.Count).End(xlToLeft).Column
+Cells(1, lastcol + 1).Value = "correv"
+Cells(1, lastcol + 2).Value = "id"
+
 Set gcell = Workbooks("metacps.xlsm").Sheets("Hoja1").Cells.Find("*@*", MatchCase:=False)
 Cells(2, "C").Value = Trim(gcell.Value)
-Cells(2, "J").Value = "correo11@gmail.com"
+Cells(2, lastcol + 1).Value = "correo11@example.com"
 Set gcell = hoja.Cells.Find("id:", MatchCase:=False)
-Cells(2, "K").Value = Trim(hoja.Cells(gcell.Row, "B").Value)
+Cells(2, lastcol + 2).Value = Trim(hoja.Cells(gcell.Row, "B").Value)
 'DatosForm.Show
 
-Columns("A:J").Select
+Columns("A:K").Select
 Selection.EntireColumn.AutoFit
 'ThisWorkbook.Sheets("Hoja2").Copy
 
 'Reemplazar por sub guardar
 ''Dim nom As String
 'nom = Environ("HOMEPATH") & "\Documents\iMacros\Datasources\DatosI.csv"
-''C:\Users\Tita\Documents\iMacros\Datasources
 ''MsgBox (nom)
 'ActiveWorkbook.SaveAs Filename:=nom, FileFormat:=xlCSV
 'Descomentar para guardar y cerrar
 ''ActiveWorkbook.Close Savechanges = True
 ''MsgBox ("Documento guardado")
 'Workbooks("cv_a_csv").Activate
-nomsec = "autorespsi"
 guardar nomsec
 
 End Sub
@@ -309,7 +392,6 @@ bPral = False
 Range("A1").Value = "Titulo"
 'Range("A2").Value = "COR"
 Range("B1").Value = "Resumen"
-
 
 Dim arrnotes
 
@@ -425,7 +507,6 @@ End With
 nomsec = "DatosII"
 guardar nomsec
 'nom = Environ("HOMEPATH") & "\Documents\iMacros\Datasources\DatosII.csv"
-'C:\Users\Tita\Documents\iMacros\Datasources
 'MsgBox (nom)
 'ActiveWorkbook.SaveAs Filename:=nom, FileFormat:=xlCSV
 
@@ -452,7 +533,17 @@ Range("B2").Value = Trim(hoja.Cells(1, "C").Value)
 Set resForm = New TyRForm
 resForm.Show
 
-nomsec = "titulocpsi"
+If niv = "" Then
+    niv = DoM
+End If
+
+Select Case niv
+    Case "doctorado"
+        nomsec = "titulocpsi"
+    Case "maestría"
+        nomsec = "tituloM_cpsi"
+End Select
+
 guardar nomsec
 
 End Sub
@@ -483,7 +574,17 @@ End If
 Set indfrm = New indexForm
 indfrm.Show
 
-nomsec = "keycpsi"
+If niv = "" Then
+    niv = DoM
+End If
+
+Select Case niv
+    Case "doctorado"
+        nomsec = "keycpsi"
+    Case "maestría"
+        nomsec = "keyM_cpsi"
+End Select
+
 guardar nomsec
 
 End Sub
@@ -536,3 +637,91 @@ lbl_Exit:
     Exit Function
     
 End Function
+
+Private Sub Append2CSV(CSVfile As String, CellRange As Range)
+
+Dim tmpCSV As String
+Dim f As Integer
+
+f = FreeFile
+
+Open CSVfile For Append As #f
+    tmpCSV = Range2CSV(CellRange)
+Write #f, tmpCSV
+Close #f
+
+End Sub
+
+Function Range2CSV(list) As String
+
+Dim tmp As String
+Dim cr As Long
+Dim r As Range
+If TypeName(list) = "Range" Then
+    cr = 1
+    For Each r In list.Cells
+        If r.Row = cr Then
+            If tmp = vbNullString Then
+            tmp = r.Value
+            Else
+            tmp = tmp & "," & r.Value
+            End If
+        Else
+        cr = cr + 1
+            If tmp = vbNullString Then
+            tmp = r.Value
+            Else
+            tmp = tmp & Chr(10) & r.Value
+            End If
+        End If
+    Next
+End If
+Range2CSV = tmp
+
+End Function
+
+Private Sub dumprangetocsv(CSVfile As String, source_range As Range)
+
+Dim tmpCSV As String
+Dim row_range As Range, mycell As Range
+Dim f As Integer
+f = FreeFile
+
+Open CSVfile For Append As #f
+    For Each row_range In source_range.Rows
+        For Each mycell In row_range.Cells
+            Write #f, mycell.Value,
+        Next mycell
+        Write #f,
+    Next row_range
+Close #f
+
+End Sub
+
+Function DoM() As String
+
+'niv = "nivel de estudios"
+'Set gcell = hoja.Rows.Find(niv, MatchCase:=False)
+'    If gcell Is Nothing Then
+'    MsgBox (niv & " no encontrado")
+'    Else
+'    niv = Trim(LCase(hoja.Cells(gcell.Row, gcell.Column + 1).Value))
+'    End If
+    Select Case MsgBox("Doctorado", vbYesNoCancel + vbInformation)
+            Case vbYes
+                niv = "doctorado"
+            Case vbNo
+                niv = "maestría"
+    End Select
+
+DoM = niv
+
+End Function
+Sub Meta()
+
+Autores
+Titulo
+Index
+niv = ""
+
+End Sub
